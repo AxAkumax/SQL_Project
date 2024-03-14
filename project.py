@@ -250,7 +250,7 @@ def main():
         return
     
     command = sys.argv[1]
-    connection = create_database_connection("localhost", "test", "passwrod", "cs122a")  # Remember Update with our own credentials
+    connection = create_database_connection("localhost", "test", "password", "cs122a")  # Remember Update with our own credentials
 
     if command == "import":
         if len(sys.argv) != 3:
