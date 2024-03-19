@@ -309,7 +309,7 @@ def listCourse(connection, UCINetID):
         list_course = []
         for row in results:
             list_course.append(','.join(str(col) for col in row))
-        print(",".join(list_course))
+        print("\n".join(list_course))
 
         return True  # Return True to indicate success
     
