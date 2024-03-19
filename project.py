@@ -306,9 +306,10 @@ def listCourse(connection, UCINetID):
 
         # Fetch the results
         results = cursor.fetchall()
-
+        list_course = []
         for row in results:
-            print(','.join(str(col) for col in row))
+            list_course.append(','.join(str(col) for col in row))
+        print(",".join(list_course))
 
         return True  # Return True to indicate success
     
