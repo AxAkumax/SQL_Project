@@ -152,7 +152,7 @@ def insert_student(connection, UCINetID, email, first, middle, last):
         cursor.execute(email_insert_query, (UCINetID, email))
 
         connection.commit()  # Commit the transaction
-        #print("Success")
+        print("Success")
     except Error as e:
         #print(f"The error '{e}' occurred")
         #print("Fail")
