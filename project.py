@@ -29,7 +29,7 @@ def execute_query(connection, query):
     try:
         cursor.execute(query)
         connection.commit()
-        print("Query executed successfully")
+        #print("Query executed successfully")
     except Error as e:
         print(f"The error '{e}' occurred")
 
@@ -154,7 +154,8 @@ def insert_student(connection, UCINetID, email, first, middle, last):
         connection.commit()  # Commit the transaction
         print("Success")
     except Error as e:
-        print(f"The error '{e}' occurred")
+        #print(f"The error '{e}' occurred")
+        print("Fail")
         success = False  # Set success to False if an error occurs
         connection.rollback()  # Rollback the transaction
 
