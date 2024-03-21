@@ -404,14 +404,29 @@ def adminEmail(connection, machineId):
 def activeStudents(connection, machineid, N, start_date, end_date):
     cursor = connection.cursor()
     try:
-        activeStudents_query = """ 
-        Select 
+        activeStudents_query = """
+        SELECT U.UCINetID, U.FirstName, U.MiddleName, U.LastName
+        FROM Users U
+        JOIN Students S ON U.UCINetID = S.UCINetID
+        JOIN `Use` ON U.UCINetID = Use.UCINetID
+        WHERE `Use`.machine_id = %s
+          AND `Use`.start_date >= %s
+          AND `Use`.end_date <= %s
+        GROUP BY U.UCINetID
+        HAVING COUNT(`Use`.UCINetID) >= %s
+        ORDER BY U.UCINetID ASC;
         """
+        cursor.execute(activeStudents_query, (machineid, start_date, end_date, N))
+        rows = cursor.fetchall()
+        result = "\n".join([",".join(map(str, row[:4])) for row in rows])
+        return result
+        
     except Exception as e:
         print(f"The error '{e}' occurred")
         return False  # Return False in case of failure
     finally:
         cursor.close()
+
 
 #--------------------------------------------------------------------------------------- END of Function 11 ----------------------------------------------------------------------------------------------------------------------------------------------------#
 
