@@ -383,7 +383,7 @@ def adminEmail(connection, machineId):
         rows = cursor.fetchall()
         result = []
         for row in rows:
-            admin_info = ", ".join(map(str, row[:4]))  # Combine admin information
+            admin_info = ",".join(map(str, row[:4]))  # Combine admin information
             emails = row[4].split(';')  # Split email addresses
             result.append(admin_info + "," + ";".join(emails))  # Combine admin info and emails
             
