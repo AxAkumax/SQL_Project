@@ -386,8 +386,9 @@ def adminEmail(connection, machineId):
             admin_info = ",".join(map(str, row[:4]))  # Combine admin information
             emails = row[4].split(';')  # Split email addresses
             result.append(admin_info + "," + ";".join(emails))  # Combine admin info and emails
-            
-        list1= "\n".join(result)  # Join all admin information
+       
+        list1= ";".join(result)  # Join all admin information
+        print(list1)
         return list1
         
     except Exception as e:
