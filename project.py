@@ -367,17 +367,17 @@ def adminEmail(connection, machineId):
     cursor = connection.cursor()
     try:
         adminEmail_query = """
-        SELECT UE.email_address
-        FROM Emails UE
-        JOIN Admins AD ON UE.UCINetID = AD.admin_UCINetID 
-        WHERE AD.admin_UCINetID  IN (
-            SELECT A.admin_UCINetID
-            FROM Admins A
-            JOIN Manage AMM ON A.admin_UCINetID = AMM.admin_UCINetID
-            WHERE AMM.machine_id = %s
-        )
-        ORDER BY AD.admin_UCINetID ASC
-
+            SELECT AD.admin_UCINetID, U.FirstName, U.MiddleName, U.LastName, UE.email_address
+            FROM Admins AD
+            JOIN Users U ON AD.admin_UCINetID = U.UCINetID
+            JOIN Emails UE ON AD.admin_UCINetID = UE.UCINetID 
+            WHERE AD.admin_UCINetID IN (
+                SELECT A.admin_UCINetID
+                FROM Admins A
+                JOIN Manage AMM ON A.admin_UCINetID = AMM.admin_UCINetID
+                WHERE AMM.machine_id = %s
+            )
+            ORDER BY AD.admin_UCINetID ASC
         """
         cursor.execute(adminEmail_query, (machineId,))
         rows = cursor.fetchall()
