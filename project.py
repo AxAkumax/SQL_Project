@@ -416,7 +416,6 @@ def activeStudents(connection, machineid, start_date, end_date, N):
         WHERE `Use`.machine_id = %s
         AND `Use`.start_date >= %s
         AND `Use`.end_date <= %s
-        AND M.operational_status = 'Active'
         GROUP BY U.UCINetID
         HAVING COUNT(DISTINCT `Use`.project_id) >= %s
         ORDER BY U.UCINetID ASC;
