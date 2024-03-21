@@ -362,7 +362,64 @@ def popularCourse(connection, num):
 
 #--------------------------------------------------------------------------------------- END of Function 9 ----------------------------------------------------------------------------------------------------------------------------------------------------#
 
+#Given a machine ID, find all administrators of that machine. List the emails of those administrators. Ordered by netid ascending.
+def adminEmail(connection, machineId):
+    cursor = connection.cursor()
+    try:
+        adminEmail_query = """
+        SELECT UE.email_address
+        FROM Emails UE
+        JOIN Admins AD ON UE.UCINetID = AD.admin_UCINetID 
+        WHERE AD.admin_UCINetID  IN (
+            SELECT A.admin_UCINetID
+            FROM Admins A
+            JOIN Manage AMM ON A.admin_UCINetID = AMM.admin_UCINetID
+            WHERE AMM.machine_id = %s
+        )
+        ORDER BY AD.admin_UCINetID ASC
 
+        """
+        cursor.execute(adminEmail_query, (machineId,))
+        rows = cursor.fetchall()
+        emails= ", ".join([row[0] for row in rows])
+        print(emails)
+        
+    except Exception as e:
+        print(f"The error '{e}' occurred")
+        return False  # Return False in case of failure
+    finally:
+        cursor.close()
+
+#--------------------------------------------------------------------------------------- END of Function 10 ----------------------------------------------------------------------------------------------------------------------------------------------------#
+
+
+def activeStudents(connection, machineid, N, start_date, end_date):
+    cursor = connection.cursor()
+    try:
+        activeStudents_query = """ 
+        Select 
+        """
+    except Exception as e:
+        print(f"The error '{e}' occurred")
+        return False  # Return False in case of failure
+    finally:
+        cursor.close()
+
+#--------------------------------------------------------------------------------------- END of Function 11 ----------------------------------------------------------------------------------------------------------------------------------------------------#
+
+def numMachineUsage(connection, courseId):
+    cursor = connection.cursor()
+    try:
+        numMachineUsage_query = """ 
+        Select 
+        """
+    except Exception as e:
+        print(f"The error '{e}' occurred")
+        return False  # Return False in case of failure
+    finally:
+        cursor.close()
+
+#--------------------------------------------------------------------------------------- END of Function 12 ----------------------------------------------------------------------------------------------------------------------------------------------------#
 
 # Main function to parse command-line arguments and call the appropriate function
 def main():
@@ -371,6 +428,7 @@ def main():
         return
     
     command = sys.argv[1]
+    #test, password
     connection = create_database_connection("localhost", 'test', 'password', "cs122a")  # Remember Update with our own credentials
 
     if command == "import":
@@ -451,7 +509,23 @@ def main():
         else:
             num = sys.argv[2]
             popularCourse(connection, num)
+    elif command =='adminEmails':
+        if len(sys.argv) != 3:
+            print("Usage: python3 project.py adminEmails [machineId]")
+        else:
+            machine_id = sys.argv[2]
+            adminEmail(connection, machine_id)
     
+    elif command =='activeStudent':
+        if len(sys.argv) != 6:
+            print("Usage: python3 project.py activeStudent [machineId] [N] [start] [end]")
+        else:
+            machine_id = sys.argv[2]
+            N = sys.argv[3]
+            start_date = sys.argv[4]
+            end_date = sys.argv[5]
+            activeStudents(connection, machine_id, N, start_date, end_date)
+
     # Add more elif blocks here for other commands like insertStudent, addEmail, etc.
     else:
         print("Invalid command")
