@@ -3,7 +3,6 @@ import csv
 import os
 import mysql.connector
 from mysql.connector import Error
-from datetime import datetime
 
 # Function to connect to the MySQL database
 def create_database_connection(host_name, user_name, user_password, db_name):
@@ -411,27 +410,23 @@ def activeStudents(connection, machineid, start_date, end_date, N):
         SELECT U.UCINetID, U.FirstName, U.MiddleName, U.LastName
         FROM Users U
         JOIN Students S ON U.UCINetID = S.UCINetID
-        JOIN `Use` ON U.UCINetID = `Use`.UCINetID
-        JOIN Machines M ON `Use`.machine_id = M.machine_id
-        WHERE `Use`.machine_id = %s
-        AND `Use`.start_date >= %s
-        AND `Use`.end_date <= %s
+        LEFT JOIN `Use` ON S.UCINetID = `Use`.UCINetID AND `Use`.machine_id = %s
+        LEFT JOIN Machines M ON `Use`.machine_id = M.machine_id
+        WHERE (`Use`.start_date IS NULL OR `Use`.start_date >= %s)
+        AND (`Use`.end_date IS NULL OR `Use`.end_date <= %s)
+        AND M.operational_status = 'Active'
         GROUP BY U.UCINetID
         HAVING COUNT(DISTINCT `Use`.project_id) >= %s
         ORDER BY U.UCINetID ASC;
-
         """
         cursor.execute(activeStudents_query, (machineid, start_date, end_date, N))
         rows = cursor.fetchall()
         result = "\n".join([",".join(map(str, row[:4])) for row in rows])
         print(result)
-        
         return result
-    
     except Exception as e:
         print(f"The error '{e}' occurred")
         return False
-    
     finally:
         cursor.close()
 
@@ -460,7 +455,7 @@ def main():
     
     command = sys.argv[1]
     #test, password
-    connection = create_database_connection("localhost", 'test', 'password', "cs122a")  # Remember Update with our own credentials
+    connection = create_database_connection("localhost", 'root', 'Sql_123ax!', "cs122a")  # Remember Update with our own credentials
 
     if command == "import":
         if len(sys.argv) != 3:
