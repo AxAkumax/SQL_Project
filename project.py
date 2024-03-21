@@ -367,7 +367,7 @@ def adminEmail(connection, machineId):
     cursor = connection.cursor()
     try:
         adminEmail_query = """
-        SELECT AD.admin_UCINetID, U.FirstName, U.MiddleName, U.LastName, UE.email_address
+       SELECT AD.admin_UCINetID, U.FirstName, U.MiddleName, U.LastName, GROUP_CONCAT(UE.email_address SEPARATOR ';') AS email_addresses
         FROM Admins AD
         JOIN Users U ON AD.admin_UCINetID = U.UCINetID
         JOIN Emails UE ON AD.admin_UCINetID = UE.UCINetID 
@@ -377,7 +377,8 @@ def adminEmail(connection, machineId):
             JOIN Manage AMM ON A.admin_UCINetID = AMM.admin_UCINetID
             WHERE AMM.machine_id = %s
         )
-        ORDER BY AD.admin_UCINetID ASC
+        GROUP BY AD.admin_UCINetID
+        ORDER BY AD.admin_UCINetID ASC;
         """
         cursor.execute(adminEmail_query, (machineId,))
         rows = cursor.fetchall()
@@ -387,7 +388,7 @@ def adminEmail(connection, machineId):
             emails = row[4].split(';')  # Split email addresses
             result.append(admin_info + "," + ";".join(emails))  # Combine admin info and emails
        
-        list1= ";".join(result)  # Join all admin information
+        list1= "\n".join(result)  # Join all admin information
         print(list1)
         return list1
         
