@@ -3,6 +3,7 @@ import csv
 import os
 import mysql.connector
 from mysql.connector import Error
+from datetime import datetime
 
 # Function to connect to the MySQL database
 def create_database_connection(host_name, user_name, user_password, db_name):
@@ -401,24 +402,28 @@ def adminEmail(connection, machineId):
 #--------------------------------------------------------------------------------------- END of Function 10 ----------------------------------------------------------------------------------------------------------------------------------------------------#
 
 
+from datetime import datetime
+
 def activeStudents(connection, machineid, start_date, end_date, N):
     cursor = connection.cursor()
     try:
         activeStudents_query = """
-       SELECT U.UCINetID, U.FirstName, U.MiddleName, U.LastName
+        SELECT U.UCINetID, U.FirstName, U.MiddleName, U.LastName
         FROM Users U
         JOIN Students S ON U.UCINetID = S.UCINetID
         WHERE U.UCINetID IN (
             SELECT UCINetID
             FROM `Use`
-            WHERE machine_id = (%s)
-            AND start_date >= (%s)
-            AND end_date <= (%s)
+            WHERE machine_id = %s
+            AND DATE(start_date) >= %s
+            AND DATE(end_date) <= %s
             GROUP BY UCINetID
-            HAVING COUNT(DISTINCT project_id) >= (%s)
+            HAVING COUNT(DISTINCT project_id) >= %s
         )
         ORDER BY U.UCINetID ASC;
         """
+        start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
+        end_date = datetime.strptime(end_date, "%Y-%m-%d").date()
         cursor.execute(activeStudents_query, (machineid, start_date, end_date, N))
         rows = cursor.fetchall()
         if not rows:
@@ -434,6 +439,7 @@ def activeStudents(connection, machineid, start_date, end_date, N):
     
     finally:
         cursor.close()
+
 
 #--------------------------------------------------------------------------------------- END of Function 11 ----------------------------------------------------------------------------------------------------------------------------------------------------#
 
