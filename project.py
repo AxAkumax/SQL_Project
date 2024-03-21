@@ -401,7 +401,7 @@ def adminEmail(connection, machineId):
 #--------------------------------------------------------------------------------------- END of Function 10 ----------------------------------------------------------------------------------------------------------------------------------------------------#
 
 
-def activeStudents(connection, machineid, N, start_date, end_date):
+def activeStudents(connection, machineid, start_date, end_date, N):
     cursor = connection.cursor()
     try:
         activeStudents_query = """
@@ -411,14 +411,13 @@ def activeStudents(connection, machineid, N, start_date, end_date):
         WHERE U.UCINetID IN (
             SELECT UCINetID
             FROM `Use`
-            WHERE machine_id = %s
-            AND start_date >= %s
-            AND end_date <= %s
+            WHERE machine_id = (%s)
+            AND start_date >= (%s)
+            AND end_date <= (%s)
             GROUP BY UCINetID
-            HAVING COUNT(DISTINCT project_id) >= %s
+            HAVING COUNT(DISTINCT project_id) >= (%s)
         )
         ORDER BY U.UCINetID ASC;
-
         """
         cursor.execute(activeStudents_query, (machineid, start_date, end_date, N))
         rows = cursor.fetchall()
@@ -551,11 +550,11 @@ def main():
         if len(sys.argv) != 6:
             print("Usage: python3 project.py activeStudent [machineId:int] [N:int] [start_date:Date] [end:Date]")
         else:
-            machine_id = sys.argv[2]
-            N = sys.argv[3]
+            machine_id = int(sys.argv[2])
+            num = int(sys.argv[3])
             start_date = sys.argv[4]
             end_date = sys.argv[5]
-            activeStudents(connection, machine_id, N, start_date, end_date)
+            activeStudents(connection, machine_id, start_date, end_date, num)
 
     # Add more elif blocks here for other commands like insertStudent, addEmail, etc.
     else:
