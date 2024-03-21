@@ -426,8 +426,6 @@ def activeStudents(connection, machineid, start_date, end_date, N):
         end_date = datetime.strptime(end_date, "%Y-%m-%d").date()
         cursor.execute(activeStudents_query, (machineid, start_date, end_date, N))
         rows = cursor.fetchall()
-        if not rows:
-            return ""  # Return empty string if no active students found
         result = "\n".join([",".join(map(str, row[:4])) for row in rows])
         print(result)
         
