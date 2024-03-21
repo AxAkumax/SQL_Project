@@ -413,8 +413,9 @@ def activeStudents(connection, machineid, N, start_date, end_date):
         AND `Use`.start_date >= %s
         AND `Use`.end_date <= %s
         GROUP BY U.UCINetID
-        HAVING COUNT(`Use`.UCINetID) >= %s
+        HAVING COUNT(DISTINCT `Use`.project_id) >= %s
         ORDER BY U.UCINetID ASC;
+
         """
         cursor.execute(activeStudents_query, (machineid, start_date, end_date, N))
         rows = cursor.fetchall()
@@ -422,6 +423,7 @@ def activeStudents(connection, machineid, N, start_date, end_date):
             return ""  # Return empty string if no active students found
         result = "\n".join([",".join(map(str, row[:4])) for row in rows])
         print(result)
+        
         return result
     
     except Exception as e:
@@ -544,12 +546,10 @@ def main():
     
     elif command =='activeStudent':
         if len(sys.argv) != 6:
-            print("Usage: python3 project.py activeStudent [machineId] [N] [start] [end]")
+            print("Usage: python3 project.py activeStudent [machineId:int] [N:int] [start_date:Date] [end:Date]")
         else:
-            machine_id = int(sys.argv[2])
-            N = int(sys.argv[3])
-            if int(N) <1:
-                print("Usage: N > 1")
+            machine_id = sys.argv[2]
+            N = sys.argv[3]
             start_date = sys.argv[4]
             end_date = sys.argv[5]
             activeStudents(connection, machine_id, N, start_date, end_date)
