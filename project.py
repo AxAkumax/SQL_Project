@@ -367,23 +367,25 @@ def adminEmail(connection, machineId):
     cursor = connection.cursor()
     try:
         adminEmail_query = """
-            SELECT AD.admin_UCINetID, U.FirstName, U.MiddleName, U.LastName, UE.email_address
-            FROM Admins AD
-            JOIN Users U ON AD.admin_UCINetID = U.UCINetID
-            JOIN Emails UE ON AD.admin_UCINetID = UE.UCINetID 
-            WHERE AD.admin_UCINetID IN (
-                SELECT A.admin_UCINetID
-                FROM Admins A
-                JOIN Manage AMM ON A.admin_UCINetID = AMM.admin_UCINetID
-                WHERE AMM.machine_id = %s
-            )
-            ORDER BY AD.admin_UCINetID ASC
+        SELECT AD.admin_UCINetID, U.FirstName, U.MiddleName, U.LastName, UE.email_address
+        FROM Admins AD
+        JOIN Users U ON AD.admin_UCINetID = U.UCINetID
+        JOIN Emails UE ON AD.admin_UCINetID = UE.UCINetID 
+        WHERE AD.admin_UCINetID IN (
+            SELECT A.admin_UCINetID
+            FROM Admins A
+            JOIN Manage AMM ON A.admin_UCINetID = AMM.admin_UCINetID
+            WHERE AMM.machine_id = %s
+        )
+        ORDER BY AD.admin_UCINetID ASC
         """
         cursor.execute(adminEmail_query, (machineId,))
         rows = cursor.fetchall()
-        emails= ", ".join([row[0] for row in rows])
-        print(emails)
-        return emails
+        admins_info = [", ".join(map(str, row[:4])) for row in rows]
+        emails = ";".join([row[4] for row in rows])
+        list1 = "\n".join([info + "," + emails for info in admins_info])
+        print(list1)
+        return list1
         
     except Exception as e:
         print(f"The error '{e}' occurred")
