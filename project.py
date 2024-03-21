@@ -405,15 +405,18 @@ def activeStudents(connection, machineid, N, start_date, end_date):
     cursor = connection.cursor()
     try:
         activeStudents_query = """
-        SELECT U.UCINetID, U.FirstName, U.MiddleName, U.LastName
+       SELECT U.UCINetID, U.FirstName, U.MiddleName, U.LastName
         FROM Users U
         JOIN Students S ON U.UCINetID = S.UCINetID
-        JOIN `Use` ON U.UCINetID = `Use`.UCINetID
-        WHERE `Use`.machine_id = %s
-        AND `Use`.start_date >= %s
-        AND `Use`.end_date <= %s
-        GROUP BY U.UCINetID
-        HAVING COUNT(DISTINCT `Use`.project_id) >= %s
+        WHERE U.UCINetID IN (
+            SELECT UCINetID
+            FROM `Use`
+            WHERE machine_id = %s
+            AND start_date >= %s
+            AND end_date <= %s
+            GROUP BY UCINetID
+            HAVING COUNT(DISTINCT project_id) >= %s
+        )
         ORDER BY U.UCINetID ASC;
 
         """
