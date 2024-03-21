@@ -412,8 +412,8 @@ def activeStudents(connection, machineid, start_date, end_date, N):
         JOIN Students S ON U.UCINetID = S.UCINetID
         LEFT JOIN `Use` ON S.UCINetID = `Use`.UCINetID AND `Use`.machine_id = %s
         LEFT JOIN Machines M ON `Use`.machine_id = M.machine_id
-        WHERE (`Use`.start_date IS NULL OR `Use`.start_date >= %s)
-        AND (`Use`.end_date IS NULL OR `Use`.end_date <= %s)
+        WHERE (`Use`.start_date IS  NOT NULL AND `Use`.start_date >= %s)
+        AND (`Use`.end_date IS NOT NULL AND `Use`.end_date <= %s)
         AND M.operational_status = 'Active'
         GROUP BY U.UCINetID
         HAVING COUNT(DISTINCT `Use`.project_id) >= %s
