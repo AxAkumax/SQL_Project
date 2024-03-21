@@ -383,6 +383,7 @@ def adminEmail(connection, machineId):
         rows = cursor.fetchall()
         emails= ", ".join([row[0] for row in rows])
         print(emails)
+        return emails
         
     except Exception as e:
         print(f"The error '{e}' occurred")
