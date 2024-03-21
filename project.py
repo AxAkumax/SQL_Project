@@ -410,8 +410,8 @@ def activeStudents(connection, machineid, N, start_date, end_date):
         JOIN Students S ON U.UCINetID = S.UCINetID
         JOIN `Use` ON U.UCINetID = `Use`.UCINetID
         WHERE `Use`.machine_id = %s
-        AND `Use`.start_date >= STR_TO_DATE(%s, '%Y-%m-%d')
-        AND `Use`.end_date <= STR_TO_DATE(%s, '%Y-%m-%d')
+        AND `Use`.start_date BETWEEN %s AND %s
+        AND `Use`.end_date BETWEEN %s AND %s
         GROUP BY U.UCINetID
         HAVING COUNT(`Use`.UCINetID) >= %s
         ORDER BY U.UCINetID ASC;
