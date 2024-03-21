@@ -381,10 +381,13 @@ def adminEmail(connection, machineId):
         """
         cursor.execute(adminEmail_query, (machineId,))
         rows = cursor.fetchall()
-        admins_info = [", ".join(map(str, row[:4])) for row in rows]
-        emails = ";".join([row[4] for row in rows])
-        list1 = "\n".join([info + "," + emails for info in admins_info])
-        print(list1)
+        result = []
+        for row in rows:
+            admin_info = ", ".join(map(str, row[:4]))  # Combine admin information
+            emails = row[4].split(';')  # Split email addresses
+            result.append(admin_info + "," + ";".join(emails))  # Combine admin info and emails
+            
+        list1= "\n".join(result)  # Join all admin information
         return list1
         
     except Exception as e:
