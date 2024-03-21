@@ -421,7 +421,8 @@ def activeStudents(connection, machineid, N, start_date, end_date):
         rows = cursor.fetchall()
         if not rows:
             return ""  # Return empty string if no active students found
-        result = ",".join([",".join(map(str, row[:4])) for row in rows])
+        result = "\n".join([",".join(map(str, row[:4])) for row in rows])
+        print(result)
         return result
     
     except Exception as e:
