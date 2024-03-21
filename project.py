@@ -410,8 +410,8 @@ def activeStudents(connection, machineid, N, start_date, end_date):
         JOIN Students S ON U.UCINetID = S.UCINetID
         JOIN `Use` ON U.UCINetID = `Use`.UCINetID
         WHERE `Use`.machine_id = %s
-        AND `Use`.start_date BETWEEN %s AND %s
-        AND `Use`.end_date BETWEEN %s AND %s
+        AND `Use`.start_date >= %s
+        AND `Use`.end_date <= %s
         GROUP BY U.UCINetID
         HAVING COUNT(`Use`.UCINetID) >= %s
         ORDER BY U.UCINetID ASC;
@@ -546,8 +546,8 @@ def main():
         if len(sys.argv) != 6:
             print("Usage: python3 project.py activeStudent [machineId] [N] [start] [end]")
         else:
-            machine_id = sys.argv[2]
-            N = sys.argv[3]
+            machine_id = int(sys.argv[2])
+            N = int(sys.argv[3])
             if int(N) <1:
                 print("Usage: N > 1")
             start_date = sys.argv[4]
