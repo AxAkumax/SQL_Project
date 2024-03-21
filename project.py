@@ -455,7 +455,7 @@ def main():
     
     command = sys.argv[1]
     #test, password
-    connection = create_database_connection("localhost", 'root', 'Sql_123ax!', "cs122a")  # Remember Update with our own credentials
+    connection = create_database_connection("localhost", 'test', 'password', "cs122a")  # Remember Update with our own credentials
 
     if command == "import":
         if len(sys.argv) != 3:
