@@ -410,17 +410,18 @@ def activeStudents(connection, machineid, N, start_date, end_date):
         JOIN Students S ON U.UCINetID = S.UCINetID
         JOIN `Use` ON U.UCINetID = `Use`.UCINetID
         WHERE `Use`.machine_id = %s
-          AND `Use`.start_date >= %s
-          AND `Use`.end_date <= %s
+        AND `Use`.start_date >= %s
+        AND `Use`.end_date <= %s
         GROUP BY U.UCINetID
         HAVING COUNT(`Use`.UCINetID) >= %s
         ORDER BY U.UCINetID ASC;
+
         """
         cursor.execute(activeStudents_query, (machineid, start_date, end_date, N))
         rows = cursor.fetchall()
         if not rows:
             return ""  # Return empty string if no active students found
-        result = "\n".join([",".join(map(str, row[:4])) for row in rows])
+        result = ",".join([",".join(map(str, row[:4])) for row in rows])
         return result
     
     except Exception as e:
@@ -429,9 +430,6 @@ def activeStudents(connection, machineid, N, start_date, end_date):
     
     finally:
         cursor.close()
-
- 
-
 
 #--------------------------------------------------------------------------------------- END of Function 11 ----------------------------------------------------------------------------------------------------------------------------------------------------#
 
@@ -550,6 +548,8 @@ def main():
         else:
             machine_id = sys.argv[2]
             N = sys.argv[3]
+            if int(N) <1:
+                print("Usage: N > 1")
             start_date = sys.argv[4]
             end_date = sys.argv[5]
             activeStudents(connection, machine_id, N, start_date, end_date)
