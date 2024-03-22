@@ -1,4 +1,3 @@
-
 import sys
 import csv
 import os
@@ -332,17 +331,31 @@ def popularCourse(connection, num):
 
     try:
         course_query = """ 
-        SELECT C.course_id, C.title, COUNT(*) AS studentCount
+        SELECT C1.course_id, C1.title, COUNT(*) AS studentCount
+        FROM Courses C1
+        WHERE C1.course_id IN 
+        ( SELECT DISTINCT C.course_id
+        FROM Courses C 
+        JOIN Projects P ON C.course_id = P.course_id
+        JOIN StudentUse U ON P.project_id = U.project_id
+        GROUP BY C.course_id, C.title
+        ORDER BY studentCount DESC, C.course_id DESC
+        LIMIT %s) ;
+        """
+
+        course_query1 = """
+        SELECT C.course_id, C.title, COUNT(DISTINCT U.UCINetID) AS studentCount
         FROM Courses C 
         JOIN Projects P ON C.course_id = P.course_id
         JOIN StudentUse U ON P.project_id = U.project_id
         GROUP BY C.course_id, C.title
         ORDER BY studentCount DESC, C.course_id DESC
         LIMIT %s;
-        """
+        """ 
+
         # Execute the query
         #print("Number: ", num, type(num)) 
-        cursor.execute(course_query, (int(num), ))
+        cursor.execute(course_query1, (int(num), ))
 
         # Fetch the results
         results = list(cursor.fetchall()) 
@@ -449,18 +462,12 @@ def numMachineUsage(connection, courseId):
     cursor = connection.cursor()
     try:
         numMachineUsage_query = """ 
-        SELECT M.machine_id, M.hostname, M.IP_address, IFNULL(COUNT(SU.machine_id), 0) AS count
+       SELECT M.machine_id, M.hostname, M.IP_address, IFNULL(COUNT(SU.machine_id), 0) AS count
         FROM Machines M
-        LEFT JOIN (
-            SELECT DISTINCT machine_id
-            FROM StudentUse
-            WHERE project_id IN (
-                SELECT project_id
-                FROM Projects
-                WHERE course_id = %s
-            )
-        ) SU ON M.machine_id = SU.machine_id
-        GROUP BY M.machine_id
+        LEFT JOIN StudentUse SU ON M.machine_id = SU.machine_id
+        LEFT JOIN Projects P ON SU.project_id = P.project_id
+        WHERE P.course_id = %s OR P.course_id IS NULL
+        GROUP BY M.machine_id, M.hostname, M.IP_address
         ORDER BY M.machine_id DESC;
         """
         cursor.execute(numMachineUsage_query, (courseId,))
@@ -475,6 +482,7 @@ def numMachineUsage(connection, courseId):
         return False  # Return False in case of failure
     finally:
         cursor.close()
+
 
 #--------------------------------------------------------------------------------------- END of Function 12 ----------------------------------------------------------------------------------------------------------------------------------------------------#
 
@@ -584,7 +592,7 @@ def main():
             activeStudents(connection, machine_id, start_date, end_date, num)
     elif command =='machineUsage':
         if len(sys.argv) !=3:
-            print("Usage: project.py machineUsage [courseId:int]")
+            print("Usage: project.py machineUsage [courseId: int]")
         else:
             course_id = sys.argv[2]
             numMachineUsage(connection, course_id)
