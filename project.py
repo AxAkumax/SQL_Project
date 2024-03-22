@@ -41,13 +41,13 @@ def import_data(folder_name, connection):
     cursor = connection.cursor()
 
     # List of table names derived from the provided CSV files
-    table_names = ['Admins', 'Courses', 'Emails', 'Machines', 'Projects', 'Students','Use', 'Manage', 'Users']
+    table_names = ['Admins', 'Courses', 'Emails', 'Machines', 'Projects', 'Students','StudentUse', 'Manage', 'Users']
 
     #----------------------- drop tables that already exist in the database --------------------------------------------------
     #To avoid foreign key constraint errors when dropping tables
     # Define the order of table deletion, ensuring dependent tables are deleted first
     tables_to_drop_in_order = [
-        'Had','Use', 'Manage',
+        'Had','StudentUse', 'Manage',
         'Projects', 'Emails', 'Students', 'Admins',
         'Machines', 'Courses', 'Users'
     ]
@@ -77,7 +77,7 @@ def import_data(folder_name, connection):
         'Projects': """CREATE TABLE IF NOT EXISTS Projects (project_id char(50) NOT NULL, course_id char(50) NOT NULL, project_name varchar(100), project_description TEXT, PRIMARY KEY(project_id), FOREIGN KEY(course_id) REFERENCES Courses(course_id));""",
         'Machines': """CREATE TABLE IF NOT EXISTS Machines (machine_id char(50) NOT NULL, hostname varchar(255), IP_address varchar(15), operational_status varchar(50), location varchar(255), PRIMARY KEY(machine_id));""",
         'Had': """CREATE TABLE IF NOT EXISTS Had(project_id char(50), course_id char(50), PRIMARY KEY(project_id), FOREIGN KEY(project_id) REFERENCES Projects(project_id), FOREIGN KEY(course_id) REFERENCES Courses(course_id)); """,
-        'Use': """CREATE TABLE IF NOT EXISTS `Use` (UCINetID char(50), project_id char(50), machine_id char(50), start_date date, end_date date, PRIMARY KEY(UCINetID, project_id, machine_id), FOREIGN KEY(UCINetID) REFERENCES Users(UCINetID), FOREIGN KEY(project_id) REFERENCES Projects(project_id), FOREIGN KEY(machine_id) REFERENCES Machines(machine_id));""",
+        'StudentUse': """CREATE TABLE IF NOT EXISTS StudentUse (UCINetID char(50), project_id char(50), machine_id char(50), start_date date, end_date date, PRIMARY KEY(UCINetID, project_id, machine_id), FOREIGN KEY(UCINetID) REFERENCES Users(UCINetID), FOREIGN KEY(project_id) REFERENCES Projects(project_id), FOREIGN KEY(machine_id) REFERENCES Machines(machine_id));""",
         'Manage': """CREATE TABLE IF NOT EXISTS Manage (admin_UCINetID char(50), machine_id char(50), PRIMARY KEY(admin_UCINetID, machine_id), FOREIGN KEY(admin_UCINetID) REFERENCES Admins(admin_UCINetID), FOREIGN KEY(machine_id) REFERENCES Machines(machine_id));"""
     }
 
@@ -100,14 +100,17 @@ def import_data(folder_name, connection):
         #print("Data inserted into Users table successfully.")
 
     # Specify the tables and their corresponding CSV files to be processed in order
-    ordered_tables = ['Admins', 'Students', 'Emails', 'Courses', 'Projects', 'Machines', 'Use','Manage']
+    ordered_tables = ['Admins', 'Students', 'Emails', 'Courses', 'Projects', 'Machines', 'StudentUse','Manage']
     
     #Disable foreign key checks
     cursor.execute("SET FOREIGN_KEY_CHECKS=0;")
     
     # Process the remaining CSV files in the specified order
     for table in ordered_tables:
-        with open(os.path.join(folder_name, table.lower() + '.csv'), 'r') as file:
+        name = table 
+        if table=="StudentUse":
+            name = "use"
+        with open(os.path.join(folder_name, f'{table.lower()}.csv'), 'r') as file:
             csv_reader = csv.reader(file)
             for row in csv_reader:
                 # Dynamically construct the INSERT INTO statement based on the structure of the CSV file
@@ -234,7 +237,7 @@ def insert_use(connection, proj_id, ucinetid, machine_id, start_date, end_date):
     cursor = connection.cursor()
     success = True
     try:
-        query = """INSERT INTO `Use` (project_id, UCINetID, machine_id, start_date, end_date) VALUES (%s, %s, %s, %s, %s)"""
+        query = """INSERT INTO StudentUse (project_id, UCINetID, machine_id, start_date, end_date) VALUES (%s, %s, %s, %s, %s)"""
         cursor.execute(query, (proj_id, ucinetid, machine_id, start_date, end_date))
         connection.commit()
         print("Success" if cursor.rowcount > 0 else "Fail")
@@ -283,7 +286,7 @@ def listCourse(connection, UCINetID):
     try:
         list_course_query = """
         SELECT DISTINCT C.course_id, C.title, C.quarter 
-        FROM Courses C, Projects P, Use U, Students S 
+        FROM Courses C, Projects P, StudentUse U, Students S 
         WHERE C.course_id = P.course_id 
         AND P.project_id = U.project_id
         AND S.UCINetID = U.UCINetID
@@ -295,7 +298,7 @@ def listCourse(connection, UCINetID):
         SELECT DISTINCT C.course_id, C.title, C.quarter 
         FROM Courses C
         JOIN Projects P ON C.course_id = P.course_id
-        JOIN Use U ON P.project_id = U.project_id
+        JOIN StudentUse U ON P.project_id = U.project_id
         JOIN Students S ON S.UCINetID = U.UCINetID
         WHERE S.UCINetID = (%s)
         ORDER BY C.course_id ASC;
@@ -334,7 +337,7 @@ def popularCourse(connection, num):
         SELECT C.course_id, C.title, COUNT(*) AS studentCount
         FROM Courses C 
         JOIN Projects P ON C.course_id = P.course_id
-        JOIN Use U ON P.project_id = U.project_id
+        JOIN StudentUse U ON P.project_id = U.project_id
         GROUP BY C.course_id, C.title
         ORDER BY studentCount DESC, C.course_id DESC
         LIMIT (%s);
@@ -407,30 +410,35 @@ def activeStudents(connection, machineid, start_date, end_date, N):
     cursor = connection.cursor()
     try:
         activeStudents_query = """
-        SELECT U.UCINetID, U.FirstName, U.MiddleName, U.LastName
-        FROM Users U
-        JOIN Students S ON U.UCINetID = S.UCINetID
-        JOIN `Use` ON U.UCINetID = `Use`.UCINetID
-        JOIN Machines M ON `Use`.machine_id = M.machine_id
-        WHERE `Use`.machine_id = %s
-        AND `Use`.start_date >= %s
-        AND `Use`.end_date <= %s
-        AND M.operational_status = 'Active'
-        GROUP BY U.UCINetID
-        HAVING COUNT(*) >= %s
-        ORDER BY U.UCINetID ASC;
+            SELECT U.UCINetID, U.FirstName, U.MiddleName, U.LastName
+            FROM Users U
+            JOIN Students S ON U.UCINetID = S.UCINetID
+            JOIN StudentUse ON U.UCINetID = Use.UCINetID
+            JOIN Machines M ON Use.machine_id = M.machine_id
+            WHERE Use.machine_id = %s
+            AND Use.start_date >= %s
+            AND Use.end_date <= %s
+            AND M.operational_status = 'Active'
+            GROUP BY U.UCINetID
+            HAVING COUNT(*) >= %s
+            ORDER BY U.UCINetID ASC;
         """
-        cursor.execute(activeStudents_query, (machineid, start_date, end_date, N))
+        cursor.execute(activeStudents_query, (machineid, start_date, end_date, N,))
         rows = cursor.fetchall()
         result = "\n".join([",".join(map(str, row[:4])) for row in rows])
         print(result)
-        return result
+        return rows
     except Exception as e:
         print(f"The error '{e}' occurred")
         return False
     finally:
         cursor.close()
 
+# SELECT *
+#            FROM `Use`
+#            WHERE `Use`.machine_id = %s 
+#                 AND `Use`.start_date >= %s 
+#                 AND `Use`.end_date <= %s 
 
 #--------------------------------------------------------------------------------------- END of Function 11 ----------------------------------------------------------------------------------------------------------------------------------------------------#
 
@@ -438,8 +446,20 @@ def numMachineUsage(connection, courseId):
     cursor = connection.cursor()
     try:
         numMachineUsage_query = """ 
-        Select 
+        SELECT M.machine_id, M.hostname, M.IP_address, IFNULL(COUNT(U.machine_id), 0) AS count
+        FROM Machines M
+        LEFT JOIN StudentUse U ON M.machine_id = U.machine_id
+        LEFT JOIN Projects P ON U.project_id = P.project_id
+        WHERE P.course_id = %s
+        GROUP BY M.machine_id
+        ORDER BY M.machine_id DESC;
         """
+        cursor.execute(numMachineUsage_query, (courseId,))
+        rows = cursor.fetchall()
+        result = "\n".join([",".join(map(str, row[:4])) for row in rows])
+        print(result)
+        return rows
+
     except Exception as e:
         print(f"The error '{e}' occurred")
         return False  # Return False in case of failure
@@ -456,7 +476,7 @@ def main():
     
     command = sys.argv[1]
     #test, password
-    connection = create_database_connection("localhost", 'test', 'password', "cs122a")  # Remember Update with our own credentials
+    connection = create_database_connection("localhost", 'root', 'Sql_123ax!', "cs122a")  # Remember Update with our own credentials
 
     if command == "import":
         if len(sys.argv) != 3:
@@ -547,11 +567,17 @@ def main():
         if len(sys.argv) != 6:
             print("Usage: python3 project.py activeStudent [machineId:int] [N:int] [start_date:Date] [end:Date]")
         else:
-            machine_id = int(sys.argv[2])
-            num = int(sys.argv[3])
+            machine_id = sys.argv[2]
+            num = sys.argv[3]
             start_date = sys.argv[4]
             end_date = sys.argv[5]
             activeStudents(connection, machine_id, start_date, end_date, num)
+    elif command =='machineUsage':
+        if len(sys.argv) !=3:
+            print("Usage: project.py machineUsage [courseId: int]")
+        else:
+            course_id = sys.argv[2]
+            numMachineUsage(connection, course_id)
 
     # Add more elif blocks here for other commands like insertStudent, addEmail, etc.
     else:
