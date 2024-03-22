@@ -410,11 +410,11 @@ def activeStudents(connection, machineid, start_date, end_date, N):
         SELECT U.UCINetID, U.FirstName, U.MiddleName, U.LastName
         FROM Users U
         JOIN Students S ON U.UCINetID = S.UCINetID
-        JOIN Use ON U.UCINetID = Use.UCINetID
-        JOIN Machines M ON Use.machine_id = M.machine_id
-        WHERE Use.machine_id = %s
-        AND Use.start_date >= %s
-        AND Use.end_date <= %s
+        JOIN `Use` ON U.UCINetID = `Use`.UCINetID
+        JOIN Machines M ON `Use`.machine_id = M.machine_id
+        WHERE `Use`.machine_id = %s
+        AND `Use`.start_date >= %s
+        AND `Use`.end_date <= %s
         AND M.operational_status = 'Active'
         GROUP BY U.UCINetID
         HAVING COUNT(*) >= %s
