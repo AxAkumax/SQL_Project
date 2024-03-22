@@ -462,15 +462,20 @@ def numMachineUsage(connection, courseId):
     cursor = connection.cursor()
     try:
         numMachineUsage_query = """ 
-     SELECT M.machine_id, M.hostname, M.IP_address, COALESCE((
-        SELECT COUNT(DISTINCT SU.machine_id)
-        FROM StudentUse SU
-        JOIN Projects P ON SU.project_id = P.project_id
-        WHERE SU.machine_id = M.machine_id
-        AND P.course_id = %s
-        ), 0) AS count
+        SELECT M.machine_id, M.hostname, M.IP_address, COALESCE(COUNT(DISTINCT SU.machine_id), 0) AS count
         FROM Machines M
+        LEFT JOIN (
+            SELECT DISTINCT machine_id
+            FROM StudentUse
+            WHERE project_id IN (
+                SELECT project_id
+                FROM Projects
+                WHERE course_id = %s
+            )
+        ) AS SU ON M.machine_id = SU.machine_id
+        GROUP BY M.machine_id
         ORDER BY M.machine_id DESC;
+
         """
         cursor.execute(numMachineUsage_query, (courseId,))
         rows = cursor.fetchall()
