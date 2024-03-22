@@ -1,3 +1,4 @@
+
 import sys
 import csv
 import os
@@ -330,18 +331,6 @@ def popularCourse(connection, num):
     cursor = connection.cursor()
 
     try:
-        course_query = """ 
-        SELECT C1.course_id, C1.title, COUNT(*) AS studentCount
-        FROM Courses C1
-        WHERE C1.course_id IN 
-        ( SELECT DISTINCT C.course_id
-        FROM Courses C 
-        JOIN Projects P ON C.course_id = P.course_id
-        JOIN StudentUse U ON P.project_id = U.project_id
-        GROUP BY C.course_id, C.title
-        ORDER BY studentCount DESC, C.course_id DESC
-        LIMIT %s) ;
-        """
 
         course_query1 = """
         SELECT C.course_id, C.title, COUNT(DISTINCT U.UCINetID) AS studentCount
@@ -461,34 +450,42 @@ def activeStudents(connection, machineid, start_date, end_date, N):
 def numMachineUsage(connection, courseId):
     cursor = connection.cursor()
     try:
-        numMachineUsage_query = """ 
-        SELECT M.machine_id, M.hostname, M.IP_address, (SELECT COALESCE(COUNT(SU.machine_id), 0)
-            FROM StudentUse SU
-            WHERE SU.machine_id = M.machine_id
-            AND SU.project_id IN (
-                SELECT project_id
-                FROM Projects
-                WHERE course_id = %s
-            )
-            ) AS count
-        FROM Machines M
-        GROUP BY M.machine_id, M.hostname, M.IP_address
-        ORDER BY 
-            M.machine_id DESC;
 
-        """
-        cursor.execute(numMachineUsage_query, (courseId,))
+        numMachineUsage_query1 = """
+            SELECT 
+    M.machine_id,
+    M.hostname,
+    M.IP_address,
+    IFNULL(U.usage_count, 0) AS count
+FROM 
+    Machines M
+LEFT JOIN (
+    SELECT 
+        machine_id,
+        COUNT(*) AS usage_count
+    FROM 
+        StudentUse U
+    INNER JOIN 
+        Projects P ON U.project_id = P.project_id
+    WHERE 
+        P.course_id = %s
+    GROUP BY 
+        machine_id
+) U ON M.machine_id = U.machine_id
+ORDER BY 
+    M.machine_id DESC;
+"""
+        cursor.execute(numMachineUsage_query1, (courseId,))
         rows = cursor.fetchall()
         result = "\n".join([",".join(map(str, row[:4])) for row in rows])
         print(result)
-        return result
+        return rows
 
     except Exception as e:
         print(f"The error '{e}' occurred")
         return False  # Return False in case of failure
     finally:
         cursor.close()
-
 
 #--------------------------------------------------------------------------------------- END of Function 12 ----------------------------------------------------------------------------------------------------------------------------------------------------#
 
