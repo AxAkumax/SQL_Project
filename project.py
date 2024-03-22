@@ -444,15 +444,15 @@ def numMachineUsage(connection, courseId):
     cursor = connection.cursor()
     try:
         numMachineUsage_query = """ 
-       SELECT 
+        SELECT 
             M.machine_id,
             M.hostname,
             M.IP_address,
-            IFNULL((
-                SELECT COUNT(*)
-                FROM StudentUse SU
-                WHERE M.machine_id = SU.machine_id
-                ), 0) AS usage_count
+            IFNULL((SELECT COUNT(*)
+            FROM StudentUse SU
+            JOIN Projects P ON SU.project_id = P.project_id
+            WHERE SU.machine_id = M.machine_id
+            AND P.course_id = %s),0) AS usage_count
         FROM 
             Machines M
         ORDER BY 
