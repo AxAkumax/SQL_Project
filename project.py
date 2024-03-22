@@ -110,7 +110,7 @@ def import_data(folder_name, connection):
         name = table 
         if table=="StudentUse":
             name = "use"
-        with open(os.path.join(folder_name, f'{table.lower()}.csv'), 'r') as file:
+        with open(os.path.join(folder_name, f'{name.lower()}.csv'), 'r') as file:
             csv_reader = csv.reader(file)
             for row in csv_reader:
                 # Dynamically construct the INSERT INTO statement based on the structure of the CSV file
@@ -234,20 +234,19 @@ def insert_machine(connection, machine_id, hostname, ip_addr, status, location):
 
 #--------------------------------------------------------------------------------------- Function 6 : Insert use record ----------------------------------------------------------------------------------------------------------------------------------------------------#
 def insert_use(connection, proj_id, ucinetid, machine_id, start_date, end_date):
-    cursor = connection.cursor()
     success = True
     try:
         query = """INSERT INTO StudentUse (project_id, UCINetID, machine_id, start_date, end_date) VALUES (%s, %s, %s, %s, %s)"""
-        cursor.execute(query, (proj_id, ucinetid, machine_id, start_date, end_date))
-        connection.commit()
-        print("Success" if cursor.rowcount > 0 else "Fail")
+        with connection.cursor() as cursor:
+            cursor.execute(query, (proj_id, ucinetid, machine_id, start_date, end_date))
+            connection.commit()
+            print("Success")
     except mysql.connector.Error as err:
         print("Fail")
         print(err)
         success = False
         connection.rollback()
 
-    cursor.close()
     return success
 #--------------------------------------------------------------------------------------- END of Function 6 : Insert use record ----------------------------------------------------------------------------------------------------------------------------------------------------#
 
@@ -278,6 +277,10 @@ def updateCourse(connection, courseID, title):
 
 #--------------------------------------------------------------------------------------- END of Function 7 ----------------------------------------------------------------------------------------------------------------------------------------------------#
 
+
+#--------------------------------------------------------------------------------------- Function 9 :popularCourse  ----------------------------------------------------------------------------------------------------------------------------------------------------#
+
+
 #--------------------------------------------------------------------------------------- Function 8 :listCourse  ----------------------------------------------------------------------------------------------------------------------------------------------------#
 
 def listCourse(connection, UCINetID):
@@ -285,40 +288,35 @@ def listCourse(connection, UCINetID):
     
     try:
         list_course_query = """
-        SELECT DISTINCT C.course_id, C.title, C.quarter 
-        FROM Courses C, Projects P, StudentUse U, Students S 
-        WHERE C.course_id = P.course_id 
-        AND P.project_id = U.project_id
-        AND S.UCINetID = U.UCINetID
-        AND S.UCINetID = (%s)
-        ORDER BY C.course_id ASC;
-        """
-
-        list_course_query1 = """ 
-        SELECT DISTINCT C.course_id, C.title, C.quarter 
-        FROM Courses C
-        JOIN Projects P ON C.course_id = P.course_id
-        JOIN StudentUse U ON P.project_id = U.project_id
-        JOIN Students S ON S.UCINetID = U.UCINetID
-        WHERE S.UCINetID = (%s)
-        ORDER BY C.course_id ASC;
-        """
+        SELECT DISTINCT C.course_id, C.title, C.quarter
+        FROM Courses C, StudentUse U, Projects P
+        WHERE U.project_id = P.project_id 
+        AND P.course_id = C.course_id 
+        AND U.UCINetID = '{0}'
+        ORDER BY C.course_id ASC; 
+        """.format(UCINetID)
 
         # Execute the query
-        cursor.execute(list_course_query1, (UCINetID,))
-
+        print("Trying...")
+        print(cursor)
+        print('coonection: ', connection)
+        print(list_course_query)
+        cursor.execute(list_course_query)
+        print("Tried...")
         # Fetch the results
         results = cursor.fetchall()
+        print("Results: ", results)
         list_course = []
         for row in results:
             list_course.append(','.join(str(col) for col in row))
-        print("\n".join(list_course))
+            print(list_course)
+        print(",".join(list_course))
 
         return True  # Return True to indicate success
     
     except Exception as e:
         print("Fail")
-        #print(f"The error '{e}' occurred")
+        print(f"The error '{e}' occurred")
         return False  # Return False in case of failure
 
     finally:
@@ -331,7 +329,7 @@ def listCourse(connection, UCINetID):
 
 def popularCourse(connection, num):
     cursor = connection.cursor()
-   
+
     try:
         course_query = """ 
         SELECT C.course_id, C.title, COUNT(*) AS studentCount
@@ -340,17 +338,18 @@ def popularCourse(connection, num):
         JOIN StudentUse U ON P.project_id = U.project_id
         GROUP BY C.course_id, C.title
         ORDER BY studentCount DESC, C.course_id DESC
-        LIMIT (%s);
+        LIMIT %s;
         """
         # Execute the query
-        print("Number: ", num, type(num)) 
-        cursor.execute(course_query, num)
+        #print("Number: ", num, type(num)) 
+        cursor.execute(course_query, (int(num), ))
 
         # Fetch the results
         results = list(cursor.fetchall()) 
         print(results)  
 
         for row in results:
+            print(row)
             print(','.join(str(col) for col in row))
 
         return True  # Return True to indicate success
@@ -364,6 +363,8 @@ def popularCourse(connection, num):
 
 
 #--------------------------------------------------------------------------------------- END of Function 9 ----------------------------------------------------------------------------------------------------------------------------------------------------#
+
+
 
 #Given a machine ID, find all administrators of that machine. List the emails of those administrators. Ordered by netid ascending.
 def adminEmail(connection, machineId):
@@ -413,11 +414,11 @@ def activeStudents(connection, machineid, start_date, end_date, N):
             SELECT U.UCINetID, U.FirstName, U.MiddleName, U.LastName
             FROM Users U
             JOIN Students S ON U.UCINetID = S.UCINetID
-            JOIN StudentUse ON U.UCINetID = Use.UCINetID
-            JOIN Machines M ON Use.machine_id = M.machine_id
-            WHERE Use.machine_id = %s
-            AND Use.start_date >= %s
-            AND Use.end_date <= %s
+            JOIN StudentUse ON U.UCINetID = StudentUse.UCINetID
+            JOIN Machines M ON StudentUse.machine_id = M.machine_id
+            WHERE StudentUse.machine_id = %s
+            AND StudentUse.start_date >= %s
+            AND StudentUse.end_date <= %s
             AND M.operational_status = 'Active'
             GROUP BY U.UCINetID
             HAVING COUNT(*) >= %s
@@ -476,7 +477,7 @@ def main():
     
     command = sys.argv[1]
     #test, password
-    connection = create_database_connection("localhost", 'root', 'Sql_123ax!', "cs122a")  # Remember Update with our own credentials
+    connection = create_database_connection("localhost", 'test', 'password', "cs122a")  # Remember Update with our own credentials
 
     if command == "import":
         if len(sys.argv) != 3:
