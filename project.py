@@ -462,13 +462,20 @@ def numMachineUsage(connection, courseId):
     cursor = connection.cursor()
     try:
         numMachineUsage_query = """ 
-        SELECT M.machine_id, M.hostname, M.IP_address, IFNULL(COUNT(U.machine_id), 0) AS count
+        SELECT M.machine_id, M.hostname, M.IP_address, (SELECT COALESCE(COUNT(SU.machine_id), 0)
+            FROM StudentUse SU
+            WHERE SU.machine_id = M.machine_id
+            AND SU.project_id IN (
+                SELECT project_id
+                FROM Projects
+                WHERE course_id = %s
+            )
+            ) AS count
         FROM Machines M
-        LEFT JOIN StudentUse U ON M.machine_id = U.machine_id
-        LEFT JOIN Projects P ON U.project_id = P.project_id
-        WHERE P.course_id = %s
-        GROUP BY M.machine_id
-        ORDER BY M.machine_id DESC;
+        GROUP BY M.machine_id, M.hostname, M.IP_address
+        ORDER BY 
+            M.machine_id DESC;
+
         """
         cursor.execute(numMachineUsage_query, (courseId,))
         rows = cursor.fetchall()
@@ -493,7 +500,7 @@ def main():
     
     command = sys.argv[1]
     #test, password
-    connection = create_database_connection("localhost", 'root', 'Sql_123ax!', "cs122a")  # Remember Update with our own credentials
+    connection = create_database_connection("localhost", 'test', 'password', "cs122a")  # Remember Update with our own credentials
 
     if command == "import":
         if len(sys.argv) != 3:
