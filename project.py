@@ -465,9 +465,10 @@ def numMachineUsage(connection, courseId):
         """
         cursor.execute(numMachineUsage_query, (courseId,))
         rows = cursor.fetchall()
+        result = []
         result = "\n".join([",".join(map(str, row[:4])) for row in rows])
         print(result)
-        return rows
+        return result
 
     except Exception as e:
         print(f"The error '{e}' occurred")
@@ -583,7 +584,7 @@ def main():
             activeStudents(connection, machine_id, start_date, end_date, num)
     elif command =='machineUsage':
         if len(sys.argv) !=3:
-            print("Usage: project.py machineUsage [courseId: int]")
+            print("Usage: project.py machineUsage [courseId:int]")
         else:
             course_id = sys.argv[2]
             numMachineUsage(connection, course_id)
