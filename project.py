@@ -75,7 +75,7 @@ def import_data(folder_name, connection):
         'Students': """CREATE TABLE IF NOT EXISTS Students (UCINetID char(50) NOT NULL, PRIMARY KEY(UCINetID), FOREIGN KEY(UCINetID) REFERENCES Users(UCINetID));""",
         'Admins': """CREATE TABLE IF NOT EXISTS Admins (admin_UCINetID char(50) NOT NULL, PRIMARY KEY(admin_UCINetID), FOREIGN KEY(admin_UCINetID) REFERENCES Users(UCINetID));""",
         'Courses': """CREATE TABLE IF NOT EXISTS Courses (course_id char(50) NOT NULL, title varchar(255), quarter varchar(20), PRIMARY KEY(course_id));""",
-        'Projects': """CREATE TABLE IF NOT EXISTS Projects (project_id char(50) NOT NULL, course_id char(50) NOT NULL, project_name varchar(100), project_description TEXT, PRIMARY KEY(project_id), FOREIGN KEY(course_id) REFERENCES Courses(course_id));""",
+        'Projects': """CREATE TABLE IF NOT EXISTS Projects (project_id char(50) NOT NULL, project_name varchar(100), project_description TEXT, course_id char(50) NOT NULL,  PRIMARY KEY(project_id), FOREIGN KEY(course_id) REFERENCES Courses(course_id));""",
         'Machines': """CREATE TABLE IF NOT EXISTS Machines (machine_id char(50) NOT NULL, hostname varchar(255), IP_address varchar(15), operational_status varchar(50), location varchar(255), PRIMARY KEY(machine_id));""",
         'Had': """CREATE TABLE IF NOT EXISTS Had(project_id char(50), course_id char(50), PRIMARY KEY(project_id), FOREIGN KEY(project_id) REFERENCES Projects(project_id), FOREIGN KEY(course_id) REFERENCES Courses(course_id)); """,
         'StudentUse': """CREATE TABLE IF NOT EXISTS StudentUse (project_id char(50), UCINetID char(50), machine_id char(50), start_date date, end_date date, PRIMARY KEY(UCINetID, project_id, machine_id), FOREIGN KEY(UCINetID) REFERENCES Users(UCINetID), FOREIGN KEY(project_id) REFERENCES Projects(project_id), FOREIGN KEY(machine_id) REFERENCES Machines(machine_id));""",
@@ -297,20 +297,20 @@ def listCourse(connection, UCINetID):
         """.format(UCINetID)
 
         # Execute the query
-        print("Trying...")
-        print(cursor)
-        print('coonection: ', connection)
-        print(list_course_query)
+        #print("Trying...")
+        #print(cursor)
+        #print('coonection: ', connection)
+        #print(list_course_query)
         cursor.execute(list_course_query)
-        print("Tried...")
+        #print("Tried...")
         # Fetch the results
         results = cursor.fetchall()
-        print("Results: ", results)
+        #print("Results: ", results)
         list_course = []
         for row in results:
             list_course.append(','.join(str(col) for col in row))
-            print(list_course)
-        print(",".join(list_course))
+            #print(list_course)
+        print("\n".join(list_course))
 
         return True  # Return True to indicate success
     
@@ -346,11 +346,13 @@ def popularCourse(connection, num):
 
         # Fetch the results
         results = list(cursor.fetchall()) 
-        print(results)  
+        #print(results)  
 
+        pop_course = []
         for row in results:
-            print(row)
-            print(','.join(str(col) for col in row))
+            pop_course.append(','.join(str(col) for col in row))
+            #print(list_course)
+        print("\n".join(pop_course))
 
         return True  # Return True to indicate success
     
@@ -404,6 +406,9 @@ def adminEmail(connection, machineId):
 
 #--------------------------------------------------------------------------------------- END of Function 10 ----------------------------------------------------------------------------------------------------------------------------------------------------#
 
+
+from datetime import datetime
+
 def activeStudents(connection, machineid, start_date, end_date, N):
     cursor = connection.cursor()
     try:
@@ -444,19 +449,19 @@ def numMachineUsage(connection, courseId):
     cursor = connection.cursor()
     try:
         numMachineUsage_query = """ 
-        SELECT 
-            M.machine_id,
-            M.hostname,
-            M.IP_address,
-            IFNULL((SELECT COUNT(*)
-            FROM StudentUse SU
-            JOIN Projects P ON SU.project_id = P.project_id
-            WHERE SU.machine_id = M.machine_id
-            AND P.course_id = %s),0) AS usage_count
-        FROM 
-            Machines M
-        ORDER BY 
-            M.machine_id DESC;
+        SELECT M.machine_id, M.hostname, M.IP_address, IFNULL(COUNT(SU.machine_id), 0) AS count
+        FROM Machines M
+        LEFT JOIN (
+            SELECT DISTINCT machine_id
+            FROM StudentUse
+            WHERE project_id IN (
+                SELECT project_id
+                FROM Projects
+                WHERE course_id = %s
+            )
+        ) SU ON M.machine_id = SU.machine_id
+        GROUP BY M.machine_id
+        ORDER BY M.machine_id DESC;
         """
         cursor.execute(numMachineUsage_query, (courseId,))
         rows = cursor.fetchall()
