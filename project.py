@@ -1,3 +1,4 @@
+
 import sys
 import csv
 import os
@@ -77,7 +78,7 @@ def import_data(folder_name, connection):
         'Projects': """CREATE TABLE IF NOT EXISTS Projects (project_id char(50) NOT NULL, course_id char(50) NOT NULL, project_name varchar(100), project_description TEXT, PRIMARY KEY(project_id), FOREIGN KEY(course_id) REFERENCES Courses(course_id));""",
         'Machines': """CREATE TABLE IF NOT EXISTS Machines (machine_id char(50) NOT NULL, hostname varchar(255), IP_address varchar(15), operational_status varchar(50), location varchar(255), PRIMARY KEY(machine_id));""",
         'Had': """CREATE TABLE IF NOT EXISTS Had(project_id char(50), course_id char(50), PRIMARY KEY(project_id), FOREIGN KEY(project_id) REFERENCES Projects(project_id), FOREIGN KEY(course_id) REFERENCES Courses(course_id)); """,
-        'StudentUse': """CREATE TABLE IF NOT EXISTS StudentUse (UCINetID char(50), project_id char(50), machine_id char(50), start_date date, end_date date, PRIMARY KEY(UCINetID, project_id, machine_id), FOREIGN KEY(UCINetID) REFERENCES Users(UCINetID), FOREIGN KEY(project_id) REFERENCES Projects(project_id), FOREIGN KEY(machine_id) REFERENCES Machines(machine_id));""",
+        'StudentUse': """CREATE TABLE IF NOT EXISTS StudentUse (project_id char(50), UCINetID char(50), machine_id char(50), start_date date, end_date date, PRIMARY KEY(UCINetID, project_id, machine_id), FOREIGN KEY(UCINetID) REFERENCES Users(UCINetID), FOREIGN KEY(project_id) REFERENCES Projects(project_id), FOREIGN KEY(machine_id) REFERENCES Machines(machine_id));""",
         'Manage': """CREATE TABLE IF NOT EXISTS Manage (admin_UCINetID char(50), machine_id char(50), PRIMARY KEY(admin_UCINetID, machine_id), FOREIGN KEY(admin_UCINetID) REFERENCES Admins(admin_UCINetID), FOREIGN KEY(machine_id) REFERENCES Machines(machine_id));"""
     }
 
@@ -234,19 +235,20 @@ def insert_machine(connection, machine_id, hostname, ip_addr, status, location):
 
 #--------------------------------------------------------------------------------------- Function 6 : Insert use record ----------------------------------------------------------------------------------------------------------------------------------------------------#
 def insert_use(connection, proj_id, ucinetid, machine_id, start_date, end_date):
+    cursor = connection.cursor()
     success = True
     try:
         query = """INSERT INTO StudentUse (project_id, UCINetID, machine_id, start_date, end_date) VALUES (%s, %s, %s, %s, %s)"""
-        with connection.cursor() as cursor:
-            cursor.execute(query, (proj_id, ucinetid, machine_id, start_date, end_date))
-            connection.commit()
-            print("Success")
+        cursor.execute(query, (proj_id, ucinetid, machine_id, start_date, end_date))
+        connection.commit()
+        print("Success" if cursor.rowcount > 0 else "Fail")
     except mysql.connector.Error as err:
         print("Fail")
         print(err)
         success = False
         connection.rollback()
 
+    cursor.close()
     return success
 #--------------------------------------------------------------------------------------- END of Function 6 : Insert use record ----------------------------------------------------------------------------------------------------------------------------------------------------#
 
@@ -277,8 +279,6 @@ def updateCourse(connection, courseID, title):
 
 #--------------------------------------------------------------------------------------- END of Function 7 ----------------------------------------------------------------------------------------------------------------------------------------------------#
 
-
-#--------------------------------------------------------------------------------------- Function 9 :popularCourse  ----------------------------------------------------------------------------------------------------------------------------------------------------#
 
 
 #--------------------------------------------------------------------------------------- Function 8 :listCourse  ----------------------------------------------------------------------------------------------------------------------------------------------------#
@@ -404,9 +404,6 @@ def adminEmail(connection, machineId):
 
 #--------------------------------------------------------------------------------------- END of Function 10 ----------------------------------------------------------------------------------------------------------------------------------------------------#
 
-
-from datetime import datetime
-
 def activeStudents(connection, machineid, start_date, end_date, N):
     cursor = connection.cursor()
     try:
@@ -447,13 +444,19 @@ def numMachineUsage(connection, courseId):
     cursor = connection.cursor()
     try:
         numMachineUsage_query = """ 
-        SELECT M.machine_id, M.hostname, M.IP_address, IFNULL(COUNT(U.machine_id), 0) AS count
-        FROM Machines M
-        LEFT JOIN StudentUse U ON M.machine_id = U.machine_id
-        LEFT JOIN Projects P ON U.project_id = P.project_id
-        WHERE P.course_id = %s
-        GROUP BY M.machine_id
-        ORDER BY M.machine_id DESC;
+        SELECT 
+            M.machine_id,
+            M.hostname,
+            M.IP_address,
+            (SELECT COUNT(*)
+            FROM StudentUse SU
+            JOIN Projects P ON SU.project_id = P.project_id
+            WHERE SU.machine_id = M.machine_id
+            AND P.course_id = %s) AS usage_count
+        FROM 
+            Machines M
+        ORDER BY 
+            M.machine_id DESC;
         """
         cursor.execute(numMachineUsage_query, (courseId,))
         rows = cursor.fetchall()
